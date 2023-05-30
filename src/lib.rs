@@ -50,15 +50,7 @@ where
     <F2 as FloppyDisk<'b>>::Permissions: FloppyUnixPermissions,
     <F2 as FloppyDisk<'b>>::Metadata: FloppyUnixMetadata,
 {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Self {
-            _f1: std::marker::PhantomData,
-            _f2: std::marker::PhantomData,
-        }
-    }
-
-    pub async fn copy_between(&self, src: &'a F1, dest: &'b F2) -> Result<()> {
+    pub async fn copy_between(src: &'a F1, dest: &'b F2) -> Result<()> {
         let paths = nyoom::walk_ordered(src, Path::new("/")).await?;
         for src_path in paths {
             let dest_path = Path::new("/");
