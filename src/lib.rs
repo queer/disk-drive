@@ -2,6 +2,7 @@ use std::path::Path;
 
 use eyre::Result;
 use floppy_disk::prelude::*;
+use tokio::io::AsyncWriteExt;
 use tracing::{debug, error, warn};
 
 pub struct DiskDrive<
@@ -110,7 +111,10 @@ where
                 let mut dest_handle: <F2 as FloppyDisk>::File =
                     dest_handle.open(dest, &dest_path).await?;
 
-                tokio::io::copy(&mut src_handle, &mut dest_handle).await?;
+                let written = tokio::io::copy(&mut src_handle, &mut dest_handle).await?;
+                debug!("wrote {written} bytes");
+                dest_handle.flush().await?;
+
                 // copy permissions
                 let src_metadata = src_handle.metadata().await?;
                 let src_permissions = src_metadata.permissions();
