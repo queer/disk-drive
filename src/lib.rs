@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use eyre::Result;
@@ -81,7 +82,15 @@ where
     ) -> Result<()> {
         let src_path = src_path.unwrap_or_else(|| PathBuf::from("/"));
         let dest_path = dest_path.unwrap_or_else(|| PathBuf::from("/"));
-        let paths = nyoom::walk_ordered(src, src_path).await?;
+        let paths = if src.metadata(&src_path).await?.is_file() {
+            debug!("copying src file {}", src_path.display());
+            let mut out = BTreeSet::new();
+            out.insert(src_path);
+            out
+        } else {
+            debug!("copying src dir {}", src_path.display());
+            nyoom::walk_ordered(src, src_path).await?
+        };
         for src_path in paths {
             debug!("copy {} -> {}", src_path.display(), dest_path.display());
             let metadata = <F1 as FloppyDisk<'a>>::metadata(src, &src_path).await?;
