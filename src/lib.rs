@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use eyre::Result;
 use floppy_disk::prelude::*;
@@ -52,18 +52,46 @@ where
     <F2 as FloppyDisk<'b>>::Metadata: FloppyUnixMetadata,
 {
     pub async fn copy_between(src: &'a F1, dest: &'b F2) -> Result<()> {
-        let paths = nyoom::walk_ordered(src, Path::new("/")).await?;
+        Self::do_copy(src, dest, None, None).await
+    }
+
+    pub async fn copy_from_src<P: Into<PathBuf>>(
+        src: &'a F1,
+        dest: &'b F2,
+        src_scope: P,
+    ) -> Result<()> {
+        let src_scope = src_scope.into();
+        Self::do_copy(src, dest, Some(src_scope), None).await
+    }
+
+    pub async fn copy_to_dest<P: Into<PathBuf>>(
+        src: &'a F1,
+        dest: &'b F2,
+        dest_scope: P,
+    ) -> Result<()> {
+        let dest_scope = dest_scope.into();
+        Self::do_copy(src, dest, None, Some(dest_scope)).await
+    }
+
+    async fn do_copy(
+        src: &'a F1,
+        dest: &'b F2,
+        src_path: Option<PathBuf>,
+        dest_path: Option<PathBuf>,
+    ) -> Result<()> {
+        let src_path = src_path.unwrap_or_else(|| PathBuf::from("/"));
+        let dest_path = dest_path.unwrap_or_else(|| PathBuf::from("/"));
+        let paths = nyoom::walk_ordered(src, src_path).await?;
         for src_path in paths {
-            let dest_path = Path::new("/");
             debug!("copy {} -> {}", src_path.display(), dest_path.display());
             let metadata = <F1 as FloppyDisk<'a>>::metadata(src, &src_path).await?;
             let file_type = metadata.file_type();
             if file_type.is_dir() {
-                Self::copy_dir_to_memfs(src, dest, &src_path, dest_path).await?;
+                Self::copy_dir_to_memfs(src, dest, &src_path, &dest_path).await?;
             } else if file_type.is_file() {
-                Self::copy_file_to_memfs(src, dest, &src_path, dest_path).await?;
+                Self::copy_file_to_memfs(src, dest, &src_path, &dest_path).await?;
             } else if file_type.is_symlink() {
-                Self::add_symlink_to_memfs(src, dest, &src_path, dest_path).await?;
+                Self::add_symlink_to_memfs(src, dest, &src_path, &dest_path).await?;
             } else {
                 error!("unknown file type for source path {src_path:?}");
             }
