@@ -93,31 +93,33 @@ where
         };
         for src_path in paths {
             trace!("processing src_path: {}", src_path.display());
-            let metadata = match <F1 as FloppyDisk<'a>>::metadata(src, &src_path).await {
-                Ok(m) => m,
-                Err(_) => <F1 as FloppyDisk<'a>>::symlink_metadata(src, &src_path).await?,
+            match <F1 as FloppyDisk<'a>>::read_link(src, &src_path).await {
+                Ok(_) => {
+                    trace!(
+                        "copy symlink {} -> {}",
+                        src_path.display(),
+                        dest_path.display()
+                    );
+                    Self::add_symlink_to_memfs(src, dest, &src_path, &dest_path).await?;
+                }
+                Err(_) => {
+                    let metadata = <F1 as FloppyDisk<'a>>::metadata(src, &src_path).await?;
+                    let file_type = metadata.file_type();
+                    if file_type.is_dir() {
+                        trace!("copy dir {} -> {}", src_path.display(), dest_path.display());
+                        Self::copy_dir_to_memfs(src, dest, &src_path, &dest_path).await?;
+                    } else if file_type.is_file() {
+                        trace!(
+                            "copy file {} -> {}",
+                            src_path.display(),
+                            dest_path.display()
+                        );
+                        Self::copy_file_to_memfs(src, dest, &src_path, &dest_path).await?;
+                    } else {
+                        error!("unknown file type for source path {src_path:?}");
+                    }
+                }
             };
-            let file_type = metadata.file_type();
-            if file_type.is_dir() {
-                trace!("copy dir {} -> {}", src_path.display(), dest_path.display());
-                Self::copy_dir_to_memfs(src, dest, &src_path, &dest_path).await?;
-            } else if file_type.is_file() {
-                trace!(
-                    "copy file {} -> {}",
-                    src_path.display(),
-                    dest_path.display()
-                );
-                Self::copy_file_to_memfs(src, dest, &src_path, &dest_path).await?;
-            } else if file_type.is_symlink() {
-                trace!(
-                    "copy symlink {} -> {}",
-                    src_path.display(),
-                    dest_path.display()
-                );
-                Self::add_symlink_to_memfs(src, dest, &src_path, &dest_path).await?;
-            } else {
-                error!("unknown file type for source path {src_path:?}");
-            }
         }
 
         Ok(())
