@@ -62,6 +62,11 @@ where
         src_scope: P,
     ) -> Result<()> {
         let src_scope = src_scope.into();
+        let src_scope = if !src_scope.starts_with("/") {
+            PathBuf::from("/").join(src_scope)
+        } else {
+            src_scope
+        };
         Self::do_copy(src, dest, Some(src_scope), None).await
     }
 
@@ -71,6 +76,11 @@ where
         dest_scope: P,
     ) -> Result<()> {
         let dest_scope = dest_scope.into();
+        let dest_scope = if !dest_scope.starts_with("/") {
+            PathBuf::from("/").join(dest_scope)
+        } else {
+            dest_scope
+        };
         Self::do_copy(src, dest, None, Some(dest_scope)).await
     }
 
