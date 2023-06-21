@@ -84,6 +84,27 @@ where
         Self::do_copy(src, dest, None, Some(dest_scope)).await
     }
 
+    pub async fn copy_from_src_to_dest<P: Into<PathBuf>, Q: Into<PathBuf>>(
+        src: &'a F1,
+        dest: &'b F2,
+        src_scope: P,
+        dest_scope: Q,
+    ) -> Result<()> {
+        let src_scope = src_scope.into();
+        let dest_scope = dest_scope.into();
+        let src_scope = if !src_scope.starts_with("/") {
+            PathBuf::from("/").join(src_scope)
+        } else {
+            src_scope
+        };
+        let dest_scope = if !dest_scope.starts_with("/") {
+            PathBuf::from("/").join(dest_scope)
+        } else {
+            dest_scope
+        };
+        Self::do_copy(src, dest, Some(src_scope), Some(dest_scope)).await
+    }
+
     async fn do_copy(
         src: &'a F1,
         dest: &'b F2,
