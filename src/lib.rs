@@ -162,10 +162,36 @@ where
         src_path: &Path,
         dest_path: &Path,
     ) -> Result<()> {
-        let dest_path = dest_path.join(src_path);
+        dest.create_dir_all("/").await?;
+        let dest_path = if !dest_path.starts_with("/") {
+            PathBuf::from("/").join(dest_path)
+        } else {
+            dest_path.to_path_buf()
+        };
+        // if dest_path is a dir, we need to copy src_path.file_name() into it
+        let dest_metadata = <F2 as FloppyDisk>::metadata(dest, &dest_path).await;
+        let dest_path = if dest_metadata.is_ok() {
+            let dest_metadata = dest_metadata?;
+            if dest_metadata.is_dir() {
+                trace!("dest path is a dir, appending src name!");
+                // strip leading / to avoid overwriting path elements
+                let src_path = if src_path.starts_with("/") {
+                    src_path.strip_prefix("/").unwrap()
+                } else {
+                    src_path
+                };
+                dest_path.join(src_path)
+            } else {
+                dest_path.to_path_buf()
+            }
+        } else {
+            dest_path.to_path_buf()
+        };
         let dest_path = dest_path.as_path();
+
         trace!("creating file {dest_path:?}");
         if let Some(memfs_parent) = dest_path.parent() {
+            trace!("creating parents: {}", memfs_parent.display());
             dest.create_dir_all(memfs_parent).await?;
         }
 
