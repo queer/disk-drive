@@ -322,7 +322,7 @@ where
         dest.create_dir_all(dest_path).await?;
 
         let src_metadata = src.metadata(src_path).await?;
-        let mode = <<F1 as FloppyDisk>::Permissions as FloppyUnixPermissions>::mode(
+        let mode = <<F1 as FloppyDisk<'_>>::Permissions as FloppyUnixPermissions>::mode(
             &src_metadata.permissions(),
         );
         let permissions = <F2 as FloppyDisk>::Permissions::from_mode(mode);
